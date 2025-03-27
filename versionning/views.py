@@ -19,7 +19,7 @@ from sklearn.svm import SVC, SVR
 from .models import *
 from .forms import *
 import os
-import seaborn as sns 
+import seaborn as sns
 
 
 def load_csv_file(request):
