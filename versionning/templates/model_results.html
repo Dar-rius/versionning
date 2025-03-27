@@ -1,0 +1,63 @@
+{% extends 'base.html' %} {% block content %}
+<div class="container">
+  <h2>Model Evaluation Results</h2>
+
+  <div class="metrics">
+    <h3>Metrics</h3>
+    {% if is_classification %}
+    <p><strong>Accuracy:</strong> {{ metrics.Accuracy }}</p>
+
+    <h4>Detailed Classification Report</h4>
+    <table>
+      <tr>
+        <th>Class</th>
+        <th>Precision</th>
+        <th>Recall</th>
+        <th>F1-Score</th>
+      </tr>
+      {% for class, metrics_data in metrics.Classification Report.items %} {% if
+      class != 'accuracy' and class != 'macro avg' and class != 'weighted avg'
+      %}
+      <tr>
+        <td>{{ class }}</td>
+        <td>{{ metrics_data.precision|floatformat:4 }}</td>
+        <td>{{ metrics_data.recall|floatformat:4 }}</td>
+        <td>{{ metrics_data.f1-score|floatformat:4 }}</td>
+      </tr>
+      {% endif %} {% endfor %}
+    </table>
+
+    {% if confusion_matrix %}
+    <h4>Confusion Matrix</h4>
+    <table>
+      {% for row in confusion_matrix %}
+      <tr>
+        {% for val in row %}
+        <td>{{ val }}</td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </table>
+    {% endif %} {% else %}
+    <p><strong>Mean Squared Error:</strong> {{ metrics.Mean Squared Error }}</p>
+
+    {% if plot_base64 %}
+    <div class="regression-plot">
+      <h3>Actual vs Predicted Values</h3>
+      <img
+        src="data:image/png;base64,{{ plot_base64 }}"
+        alt="Actual vs Predicted Plot"
+      />
+    </div>
+    {% endif %} {% if residual_plot_base64 %}
+    <div class="residual-plot">
+      <h3>Residual Plot</h3>
+      <img
+        src="data:image/png;base64,{{ residual_plot_base64 }}"
+        alt="Residual Plot"
+      />
+    </div>
+    {% endif %} {% endif %}
+  </div>
+</div>
+{% endblock %}

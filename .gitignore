@@ -1,0 +1,7 @@
+db.sqlite3
+poetry.lock
+media
+tests
+/versionning/__pycache__
+/versionning/migrations/__pycache__
+/server/__pycache__
