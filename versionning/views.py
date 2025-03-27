@@ -19,20 +19,18 @@ from sklearn.svm import SVC, SVR
 from .models import *
 from .forms import *
 import os
+import seaborn as sns 
 
 
 def load_csv_file(request):
     if request.method == "POST":
         form = CSVUploadForm(request.POST, request.FILES)
         if form.is_valid():
-            # Delete existing CSV and trained model instances
-            existing_csvs = CSV.objects.all()
-            for csv in existing_csvs:
-                csv.delete()  # This will trigger the signal to delete the file
-            
+            # Supprime les fichiers CSV précédents
+            CSV.objects.all().delete()
             TrainedModel.objects.all().delete()
-            
-            # Save the new CSV file
+
+            # Sauvegarde le nouveau fichier
             csv_instance = form.save()
 
             # Lecture du fichier pour validation
@@ -146,8 +144,12 @@ def train_model(request):
 def visualisation(request, y_test, y_pred, is_classification, trained_model):
     # Calculer les métriques détaillées
     metrics = {}
+    plot_base64 = None
+    residual_plot_base64 = None
+    conf_matrix = None
 
     if is_classification:
+        # Métriques de classification
         accuracy = accuracy_score(y_test, y_pred)
         metrics["Accuracy"] = f"{accuracy:.4f}"
 
@@ -157,54 +159,63 @@ def visualisation(request, y_test, y_pred, is_classification, trained_model):
 
         # Matrice de confusion
         conf_matrix = confusion_matrix(y_test, y_pred)
+
+        # Graphique de la matrice de confusion
+        plt.figure(figsize=(8, 6))
+        sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues')
+        plt.title('Confusion Matrix')
+        plt.xlabel('Predicted Label')
+        plt.ylabel('True Label')
+        
+        # Convertir le graphique de la matrice de confusion
+        buffer = io.BytesIO()
+        plt.savefig(buffer, format='png')
+        buffer.seek(0)
+        plot_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+        plt.close()
+
     else:
+        # Métriques de régression
         mse = mean_squared_error(y_test, y_pred)
-        metrics["Mean Squared Error"] = f"{mse:.4f}"
-        conf_matrix = None
+        metrics["Mean_Squared_Error"] = f"{mse:.4f}"
 
-    # Génération des graphiques
-    plot_base64 = None
-    residual_plot_base64 = None
-
-    # Graphique pour régression
-    if not is_classification:
-        # Scatter plot
-        fig, ax = plt.subplots(figsize=(10, 6))
-        ax.scatter(y_test, y_pred, alpha=0.7)
-        ax.plot(
+        # Scatter plot des valeurs actuelles vs prédites
+        plt.figure(figsize=(10, 6))
+        plt.scatter(y_test, y_pred, alpha=0.7)
+        plt.plot(
             [y_test.min(), y_test.max()],
             [y_test.min(), y_test.max()],
             "r--",
             lw=2,
-            label="Perfect Prediction",
+            label="Perfect Prediction"
         )
-        ax.set_xlabel("Actual Values")
-        ax.set_ylabel("Predicted Values")
-        ax.set_title("Actual vs. Predicted Values")
-        ax.legend()
-
+        plt.xlabel("Actual Values")
+        plt.ylabel("Predicted Values")
+        plt.title("Actual vs. Predicted Values")
+        plt.legend()
+        
         # Convertir le scatter plot
         buffer = io.BytesIO()
-        plt.savefig(buffer, format="png")
+        plt.savefig(buffer, format='png')
         buffer.seek(0)
-        plot_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
-        plt.close(fig)
+        plot_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+        plt.close()
 
-        # Résidus
-        fig, ax = plt.subplots(figsize=(10, 6))
+        # Plot des résidus
         residuals = y_test - y_pred
-        ax.scatter(y_pred, residuals, alpha=0.7)
-        ax.axhline(y=0, color="r", linestyle="--")
-        ax.set_xlabel("Predicted Values")
-        ax.set_ylabel("Residuals")
-        ax.set_title("Residual Plot")
-
+        plt.figure(figsize=(10, 6))
+        plt.scatter(y_pred, residuals, alpha=0.7)
+        plt.axhline(y=0, color='r', linestyle='--')
+        plt.xlabel("Predicted Values")
+        plt.ylabel("Residuals")
+        plt.title("Residual Plot")
+        
         # Convertir le plot des résidus
         buffer = io.BytesIO()
-        plt.savefig(buffer, format="png")
+        plt.savefig(buffer, format='png')
         buffer.seek(0)
-        residual_plot_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
-        plt.close(fig)
+        residual_plot_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+        plt.close()
 
     # Contexte pour le template
     context = {
@@ -215,5 +226,5 @@ def visualisation(request, y_test, y_pred, is_classification, trained_model):
         "trained_model": trained_model,
         "confusion_matrix": conf_matrix.tolist() if conf_matrix is not None else None,
     }
-
+    
     return render(request, "model_results.html", context)
