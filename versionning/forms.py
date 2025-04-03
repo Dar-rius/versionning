@@ -22,10 +22,12 @@ class CSVUploadForm(forms.ModelForm):
 
         if file:
             try:
-                # Tenter de lire le fichier CSV
+                # Lire le fichier CSV pour validation
                 df = pd.read_csv(file)
+                # Réinitialiser le curseur pour permettre une lecture ultérieure
+                file.seek(0)
 
-                # Vérifier que les colonnes spécifiées existent
+                # Vérifier que les colonnes spécifiées existent dans le CSV
                 features = cleaned_data.get("features", "").split(",")
                 target = cleaned_data.get("target", "")
 
@@ -33,13 +35,13 @@ class CSVUploadForm(forms.ModelForm):
                     raise forms.ValidationError(
                         "Les colonnes spécifiées n'existent pas dans le fichier."
                     )
-
             except Exception as e:
                 raise forms.ValidationError(
                     f"Erreur de lecture du fichier CSV : {str(e)}"
                 )
 
         return cleaned_data
+
 
 
 class ModelTrainingForm(forms.ModelForm):
